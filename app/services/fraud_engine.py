@@ -1,20 +1,30 @@
-from datetime import timedelta
+from sqlalchemy.orm import Session
+from app.services.fraud_rules import FraudRules
+from app.repositories.fraud_repo import FraudRepository
+from app.models.transaction import Transaction
 
 class FraudEngine:
-    def __init__(self, tx_repo):
-        self.tx_repo = tx_repo
+    def __init__(self, fraud_repo: FraudRepository):
+        self.fraud_repo = fraud_repo
 
-    def evaluate(self, db, tx):
-        # Rule 1: high amount
-        if tx.amount >= 10000:
-            return True, "High amount transaction"
+    def evaluate(self, db: Session, tx: Transaction):
+        rules = [
+            FraudRules.high_amount,
+            lambda t: FraudRules.rapid_transactions(db, t),
+            FraudRules.geo_mismatch,
+        ]
 
-        # Rule 2: rapid transactions
-        recent = self.tx_repo.get_recent_by_account(db, tx.account_id, limit=5)
-        if len(recent) >= 3:
-            t0 = recent[-1].transaction_date
-            t1 = recent[0].transaction_date
-            if (t1 - t0) <= timedelta(minutes=2):
-                return True, "Rapid transaction burst"
+        for rule in rules:
+            result = rule(tx)
+            if result:
+                self.fraud_repo.create_alert(
+                    db=db,
+                    transaction_id=tx.transaction_id,
+                    risk_score=result["risk_score"],
+                    risk_level=result["risk_level"],
+                    reason_code=result["reason_code"],
+                    notes=result["notes"],
+                )
+                return result  # stop at first hit (v1 strategy)
 
-        return False, None
+        return None
