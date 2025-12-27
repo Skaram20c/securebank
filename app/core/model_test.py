@@ -1,5 +1,7 @@
-from app.models.customer import Customer
-from app.models.transactions import Transactions
+from app.models import (
+    Customer, Account, AccountHolder, Transaction, LedgerEntry,
+    Investigator, FraudAlert, Case, CaseAlert, CaseNote, AlertActionHistory
+)
 
-print(Customer.__tablename__)
-print(Transactions.__tablename__)
+print("✅ Models imported successfully")
+print(Customer.__tablename__, Account.__tablename__, Transaction.__tablename__)

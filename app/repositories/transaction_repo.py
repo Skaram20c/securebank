@@ -4,14 +4,5 @@ from app.models.transaction import Transaction
 class TransactionRepository:
     def create(self, db: Session, tx: Transaction) -> Transaction:
         db.add(tx)
-        db.flush()   # gets tx id without commit yet
+        db.flush()  # get transaction_id
         return tx
-
-    def get_recent_by_account(self, db: Session, account_id: int, limit: int = 10):
-        return (
-            db.query(Transaction)
-            .filter(Transaction.account_id == account_id)
-            .order_by(Transaction.transaction_date.desc())
-            .limit(limit)
-            .all()
-        )
